@@ -15,7 +15,7 @@ logger = structlog.get_logger(__name__)
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--redis-url', default='redis://drell.cs.washington.edu:6379')
+parser.add_argument('--redis-url', default='redis://localhost:6379')
 parser.add_argument('--csv', type=Path)
 parser.add_argument('--ttl', type=int, default=120)
 parser.add_argument('--queue', type=str, default='default')
