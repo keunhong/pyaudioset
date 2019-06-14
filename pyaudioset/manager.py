@@ -3,9 +3,11 @@ import logging
 import time
 from pathlib import Path
 
+import pytube.exceptions
 import rq
 import structlog as structlog
 from redis import Redis
+from rq.exceptions import NoSuchJobError
 
 from pyaudioset import worker
 from pyaudioset import audioset
@@ -17,6 +19,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--redis-url', default='redis://drell.cs.washington.edu:6379')
 parser.add_argument('--csv', type=Path)
 parser.add_argument('--ttl', type=int, default=120)
+parser.add_argument('--queue', type=str, default='default')
 parser.add_argument('--save-dir', type=Path, required=True)
 parser.add_argument('--log-path', type=Path)
 parser.add_argument('--max-jobs', type=int, default=32)
@@ -55,7 +58,10 @@ def handle_finished_job(job):
 
 def handle_failed_job(job):
     log = logger.bind(job_id=job.get_id(), hostname=job.meta.get('hostname'))
-    log.error("job failed", exc=job.exc_info)
+    if job.exc_info and 'pytube.exceptions.VideoUnavailable' in job.exc_info:
+        log.error("video unavailable")
+    else:
+        log.error("job failed", exc=job.exc_info)
 
 
 def process_finished_jobs(jobs: rq.job.Job):
@@ -63,7 +69,12 @@ def process_finished_jobs(jobs: rq.job.Job):
     num_failed = 0
     unfinished = []
     for job in jobs:
-        job.refresh()
+        try:
+            job.refresh()
+        except NoSuchJobError:
+            logger.error("no such job?", job_id=job.get_id())
+            continue
+
         if job.is_finished:
             handle_finished_job(job)
             num_finished += 1
@@ -84,8 +95,6 @@ def loop(q, clips, max_jobs=10):
 
     jobs = []
 
-    last_status = time.time()
-
     while True:
         jobs, num_finished, num_failed = process_finished_jobs(jobs)
         total_finished += num_finished
@@ -102,16 +111,12 @@ def loop(q, clips, max_jobs=10):
                             args=(clip,),
                             result_ttl=args.ttl)
             jobs.append(job)
-            logger.info("queued job", job_id=job.get_id(), video_id=clip.video_id)
-            continue
-
-        if time.time() - last_status > 10:
-            logger.info("status",
+            logger.info("queued job", job_id=job.get_id(), video_id=clip.video_id,
                         total=total_clips,
                         finished=total_finished,
                         failed=total_failed,
                         percent_done=f'{(total_failed+total_finished)/total_clips*100:.02f}%')
-            last_status = time.time()
+            continue
 
         time.sleep(2)
 
@@ -135,7 +140,7 @@ def main():
     logger.info("loaded csv", num_clips=len(clips))
 
     r = Redis.from_url(args.redis_url)
-    q = rq.Queue(connection=r)
+    q = rq.Queue(name=args.queue, connection=r)
 
     loop(q, clips, args.max_jobs)
 

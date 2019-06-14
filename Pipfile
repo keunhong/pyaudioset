@@ -8,9 +8,10 @@ verify_ssl = true
 [packages]
 rq = "*"
 redis = "*"
-pytube = {git = "https://github.com/minwook-shin/pytube.git",ref = "master"}
 structlog = "*"
 colorama = "*"
+pytube = {git = "https://github.com/minwook-shin/pytube.git",ref = "master"}
+pafy = "*"
 
 [requires]
 python_version = "3.7"

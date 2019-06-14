@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "92d8279b9ed05142de09f1ecc255067b70a7e7009cc4f2381c3a698d8d35174f"
+            "sha256": "54285d64fdfded1fe971816e29bc3e19cf7475386743dca045439b055b7a046a"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -32,12 +32,16 @@
             "index": "pypi",
             "version": "==0.4.1"
         },
+        "pafy": {
+            "hashes": [
+                "sha256:c6506070065829a0419276fc6a2649a5d35e77efdc91b792c2db8576d8b779d9",
+                "sha256:e842dc589a339a870b5869cc3802f2e95824edf347f65128223cd5ebdff21024"
+            ],
+            "index": "pypi",
+            "version": "==0.5.4"
+        },
         "pytube": {
             "git": "https://github.com/minwook-shin/pytube.git",
-            "hashes": [
-                "sha256:9190f5e13b05a4fc1586eedd46f7164c3a4318607d455a1f7c126699ddde724f",
-                "sha256:2a32f3475f063d25e7b7a7434a93b51d59aadbbda7ed24af48f097b2876c0964"
-            ],
             "ref": "f7ed32da09b6387713b15c7eb3ff5f17516e7ea2",
             "version": "==9.5.0"
         },
