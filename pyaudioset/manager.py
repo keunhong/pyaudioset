@@ -3,7 +3,6 @@ import logging
 import time
 from pathlib import Path
 
-import pytube.exceptions
 import rq
 import structlog as structlog
 from redis import Redis

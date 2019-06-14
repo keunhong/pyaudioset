@@ -1,6 +1,5 @@
 import tempfile
 
-import pytube
 import rq
 import socket
 import structlog
@@ -41,7 +40,7 @@ def _download_progressive(yt, save_dir):
 
     path = _try_download_streams(streams, save_dir)
 
-    return path, pathfy
+    return path, path
 
 
 def _download_dash(yt, save_dir):

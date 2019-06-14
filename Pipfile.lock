@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "54285d64fdfded1fe971816e29bc3e19cf7475386743dca045439b055b7a046a"
+            "sha256": "a4d86a2af82d42f49d2c6f3570b2b61f10fe422efe6df7c4763db68e9db971d5"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -41,8 +41,8 @@
             "version": "==0.5.4"
         },
         "pytube": {
-            "git": "https://github.com/minwook-shin/pytube.git",
-            "ref": "f7ed32da09b6387713b15c7eb3ff5f17516e7ea2",
+            "git": "https://github.com/keunhong/pytube.git",
+            "ref": "13b0a7e52c2fcb06e180832a79953ba67ed99151",
             "version": "==9.5.0"
         },
         "redis": {

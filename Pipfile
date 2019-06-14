@@ -10,8 +10,8 @@ rq = "*"
 redis = "*"
 structlog = "*"
 colorama = "*"
-pytube = {git = "https://github.com/minwook-shin/pytube.git",ref = "master"}
 pafy = "*"
+pytube = {git = "https://github.com/keunhong/pytube.git",ref = "master"}
 
 [requires]
 python_version = "3.7"
