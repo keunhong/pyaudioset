@@ -2,6 +2,7 @@ import tempfile
 
 import pytube
 import rq
+import socket
 import structlog
 from pytube import YouTube
 
@@ -14,8 +15,15 @@ def get_url(video_id):
     return f'https://youtube.com/watch?v={video_id}'
 
 
+def get_hostname():
+    return socket.gethostname().split('.')[0]
+
+
 def download(clip, width=256, height=256, fps=16, sr=16000):
     job = rq.get_current_job()
+    job.meta['hostname'] = get_hostname()
+    job.save_meta()
+
     log = logger.bind(job_id=job.id, video_id=clip.video_id, start=clip.start, end=clip.end)
 
     url = get_url(clip.video_id)

@@ -19,6 +19,7 @@ parser.add_argument('--csv', type=Path)
 parser.add_argument('--ttl', type=int, default=120)
 parser.add_argument('--save-dir', type=Path, required=True)
 parser.add_argument('--log-path', type=Path)
+parser.add_argument('--max-jobs', type=int, default=32)
 args = parser.parse_args()
 
 
@@ -27,16 +28,19 @@ def get_clip_path(clip):
 
 
 def get_next_clip(clip_iter):
+    num_skipped = 0
     while True:
         clip = next(clip_iter)
         if get_clip_path(clip).exists():
+            num_skipped += 1
             continue
-        return clip
+        return clip, num_skipped
 
 
 def handle_finished_job(job):
     clip = job.args[0]
-    log = logger.bind(job_id=job.get_id(), video_id=clip.video_id)
+    log = logger.bind(job_id=job.get_id(), video_id=clip.video_id,
+                      hostname=job.meta.get('hostname'))
     payload = job.result
     assert type(payload) == bytes
 
@@ -50,42 +54,72 @@ def handle_finished_job(job):
 
 
 def handle_failed_job(job):
-    log = logger.bind(job_id=job.get_id())
-    job.refresh()
+    log = logger.bind(job_id=job.get_id(), hostname=job.meta.get('hostname'))
     log.error("job failed", exc=job.exc_info)
 
 
 def process_finished_jobs(jobs: rq.job.Job):
+    num_finished = 0
+    num_failed = 0
     unfinished = []
     for job in jobs:
-        log = logger.bind(job_id=job.get_id())
+        job.refresh()
         if job.is_finished:
             handle_finished_job(job)
+            num_finished += 1
         elif job.is_failed:
             handle_failed_job(job)
+            num_failed += 1
         else:
             unfinished.append(job)
 
-    return unfinished
+    return unfinished, num_finished, num_failed
 
 
 def loop(q, clips, max_jobs=10):
     clip_iter = iter(clips)
+    total_clips = len(clips)
+    total_finished = 0
+    total_failed = 0
 
     jobs = []
 
+    last_status = time.time()
+
     while True:
-        jobs = process_finished_jobs(jobs)
+        jobs, num_finished, num_failed = process_finished_jobs(jobs)
+        total_finished += num_finished
+        total_failed += num_failed
 
         if len(jobs) < max_jobs:
-            clip = get_next_clip(clip_iter)
+            try:
+                clip, num_skipped = get_next_clip(clip_iter)
+            except StopIteration:
+                break
+
+            total_finished += num_skipped
             job = q.enqueue(worker.download,
                             args=(clip,),
                             result_ttl=args.ttl)
             jobs.append(job)
+            logger.info("queued job", job_id=job.get_id(), video_id=clip.video_id)
             continue
 
+        if time.time() - last_status > 10:
+            logger.info("status",
+                        total=total_clips,
+                        finished=total_finished,
+                        failed=total_failed,
+                        percent_done=f'{(total_failed+total_finished)/total_clips*100:.02f}%')
+            last_status = time.time()
+
         time.sleep(2)
+
+    logger.info("done!",
+                total=total_clips,
+                finished=total_finished,
+                failed=total_failed,
+                percent_done=f'{(total_failed+total_finished)/total_clips*100:.02f}%')
 
 
 def get_unprocessed_clips(r, clips):
@@ -103,7 +137,7 @@ def main():
     r = Redis.from_url(args.redis_url)
     q = rq.Queue(connection=r)
 
-    loop(q, clips)
+    loop(q, clips, args.max_jobs)
 
 
 if __name__ == '__main__':
